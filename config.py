@@ -11,6 +11,7 @@ load_dotenv()
 API_ID = int(getenv("API_ID", ""))
 API_HASH = getenv("API_HASH", "")
 BOT_TOKEN = getenv("BOT_TOKEN", "")
+BOT_USERNAME = getenv("BOT_USERNAME", "StormMusicPlayer_bot")
 
 OWNER_ID = int(getenv("OWNER_ID", "7639428220"))
 OWNER_USERNAME = getenv("OWNER_USERNAME", "ll_KEX_ll")
