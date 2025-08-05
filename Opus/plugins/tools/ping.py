@@ -2,7 +2,7 @@ from datetime import datetime
 from pyrogram import filters
 from pyrogram.types import Message
 from Opus import app
-from Opus.core.call import Anony
+from Opus.core.call import Space
 from Opus.utils import bot_sys_stats
 from Opus.utils.decorators.language import language
 from Opus.utils.inline import supp_markup
