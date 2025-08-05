@@ -8,6 +8,7 @@ from ..logging import LOGGER
 
 TEMP_MONGODB = "mongodb+srv://strvortexcore:vortexcore0019@cluster0.fkb3o.mongodb.net/?retryWrites=true&w=majority"
 
+DB_NAME = "Opus"
 
 if config.MONGO_DB_URI is None:
     LOGGER(__name__).warning(
