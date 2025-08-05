@@ -7,7 +7,7 @@ from pytgcalls.exceptions import NoActiveGroupCall
 
 import config
 from Opus import Apple, Resso, SoundCloud, Spotify, Telegram, YouTube, app
-from Opus.core.call import Anony
+from Opus.core.call import Space
 from Opus.utils import seconds_to_min, time_to_seconds
 from Opus.utils.channelplay import get_channeplayCB
 from Opus.utils.decorators.language import languageCB
