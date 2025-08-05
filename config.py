@@ -91,6 +91,15 @@ votemode = {}
 autoclean = []
 confirmer = {}
 
+def time_to_seconds(time: str) -> int:
+    return sum(int(x) * 60**i for i, x in enumerate(reversed(time.split(":"))))
+
+DURATION_LIMIT = time_to_seconds(f"{DURATION_LIMIT_MIN}:00")
+
+BANNED_USERS = filters.user()
+adminlist, lyrical, votemode, autoclean, confirmer = {}, {}, {}, [], {}
+
+
 def validate_url(url, url_type):
     if url and not re.match(r"(?:http|https)://", url):
         raise SystemExit(f"[ERROR] - Your {url_type} url is wrong. Please ensure that it starts with https://")
