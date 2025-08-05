@@ -51,9 +51,11 @@ START_IMG_URL = getenv("START_IMG_URL", "https://envs.sh/lSU.jpg")
 PING_IMG_URL = getenv("PING_IMG_URL", "https://graph.org/file/9077cd2ba5818efef2d28.jpg")
 PLAYLIST_IMG_URL = getenv("PLAYLIST_IMG_URL", "https://graph.org/file/eb1e2b58e17964083db73.jpg")
 STATS_IMG_URL = getenv("STATS_IMG_URL", "https://envs.sh/Ol4.jpg")
+SOUNCLOUD_IMG_URL = "https://files.catbox.moe/7c4ib1.jpg"
 TELEGRAM_AUDIO_URL = getenv("TELEGRAM_AUDIO_URL", "https://envs.sh/Olr.jpg")
 TELEGRAM_VIDEO_URL = getenv("TELEGRAM_VIDEO_URL", "https://envs.sh/Olr.jpg")
 STREAM_IMG_URL = getenv("STREAM_IMG_URL", "https://envs.sh/Olk.jpg")
+APPLE_IMG_URL = "https://files.catbox.moe/cq87ww.jpg"
 YOUTUBE_IMG_URL = getenv("YOUTUBE_IMG_URL", "https://files.catbox.moe/6xpaz5.jpg")
 FAILED = "https://files.catbox.moe/6xpaz5.jpg"
 
