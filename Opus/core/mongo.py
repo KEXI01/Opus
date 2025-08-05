@@ -1,13 +1,34 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-from config import MONGO_DB_URI
-from Opus.logging import LOGGER
+from motor.motor_asyncio import AsyncIOMotorClient as _mongo_client_
+from pymongo import MongoClient
+from pyrogram import Client
 
-LOGGER(__name__).info("☁️ Iɴɪᴛɪᴀᴛɪɴɢ Mᴏɴɢᴏ Cᴏɴɴᴇᴄᴛɪᴏɴ...")
+import config
 
-try:
-    _mongo_async_ = AsyncIOMotorClient(MONGO_DB_URI)
+from ..logging import LOGGER
+
+TEMP_MONGODB = "mongodb+srv://strvortexcore:vortexcore0019@cluster0.fkb3o.mongodb.net/?retryWrites=true&w=majority"
+
+
+if config.MONGO_DB_URI is None:
+    LOGGER(__name__).warning(
+        "ɴᴏ ᴍᴏɴɢᴏ ᴅʙ ᴜʀʟ ғᴏᴜɴᴅ.. ʏᴏᴜʀ ʙᴏᴛ ᴡɪʟʟ ᴡᴏʀᴋ ᴏɴ sʜᴜᴋʟᴀ  ᴍᴜsɪᴄ ᴅᴀᴛᴀʙᴀsᴇ"
+    )
+    temp_client = Client(
+        "Opus",
+        bot_token=config.BOT_TOKEN,
+        api_id=config.API_ID,
+        api_hash=config.API_HASH,
+    )
+    temp_client.start()
+    info = temp_client.get_me()
+    username = info.username
+    temp_client.stop()
+    _mongo_async_ = _mongo_client_(TEMP_MONGODB)
+    _mongo_sync_ = MongoClient(TEMP_MONGODB)
+    mongodb = _mongo_async_[username]
+    pymongodb = _mongo_sync_[username]
+else:
+    _mongo_async_ = _mongo_client_(config.MONGO_DB_URI)
+    _mongo_sync_ = MongoClient(config.MONGO_DB_URI)
     mongodb = _mongo_async_.Opus
-    LOGGER(__name__).info("✅ Mᴏɴɢᴏ Lɪɴᴋᴇᴅ » Dᴀᴛᴀғʟᴏᴡ sᴛᴀʙʟɪsʜᴇᴅ.")
-except Exception as e:
-    LOGGER(__name__).error(f"❌ Cᴏɴɴᴇᴄᴛɪᴏɴ Fᴀɪʟᴇᴅ » Mᴏɴɢᴏᴅʙ ᴇʀʀᴏʀ: {e}")
-    exit()
+    pymongodb = _mongo_sync_.Opus
