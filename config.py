@@ -17,6 +17,7 @@ OWNER_USERNAME = getenv("OWNER_USERNAME", "ll_KEX_ll")
 EVALOP = list(map(int, getenv("EVALOP", "7639428220").split()))
 
 LOGGER_ID = int(getenv("LOGGER_ID", ""))
+LOG_ERROR_ID = "-1002139499282"
 SONG_DUMP_ID = int(getenv("SONG_DUMP_ID", "-1002139499282"))
 ASSUSERNAME = getenv("ASSUSERNAME", "None")
 STRING1 = getenv("STRING_SESSION", "")
