@@ -38,20 +38,14 @@ autoend = {}
 counter = {}
 
 def dynamic_media_stream(path: str, video: bool = False, ffmpeg_params: str = None) -> MediaStream:
-    """Create MediaStream compatible with pytgcalls v2.2.5"""
-    if video:
-        return MediaStream(
-            path,
-            audio_parameters=AudioQuality.MEDIUM,
-            video_parameters=VideoQuality.HD_720p,
-            ffmpeg_parameters=ffmpeg_params,
-        )
-    else:
-        return MediaStream(
-            path,
-            audio_parameters=AudioQuality.STUDIO,
-            ffmpeg_parameters=ffmpeg_params,
-        )
+    return MediaStream(
+        audio_path=path,
+        media_path=path,
+        audio_parameters=AudioQuality.MEDIUM if video else AudioQuality.STUDIO,
+        video_parameters=VideoQuality.HD_720p if video else VideoQuality.SD_360p,
+        video_flags=(MediaStream.Flags.AUTO_DETECT if video else MediaStream.Flags.IGNORE),
+        ffmpeg_parameters=ffmpeg_params,
+    )
 
 async def _clear_(chat_id: int) -> None:
     popped = db.pop(chat_id, None)
@@ -93,45 +87,27 @@ class Call:
 
     @capture_internal_err
     async def pause_stream(self, chat_id: int) -> None:
-        try:
-            assistant = await group_assistant(self, chat_id)
-            await assistant.pause(chat_id)  # Fixed method name
-        except (IndexError, ValueError):
-            raise AssistantErr("No assistant available")
+        assistant = await group_assistant(self, chat_id)
+        await assistant.pause(chat_id)
 
     @capture_internal_err
     async def resume_stream(self, chat_id: int) -> None:
-        try:
-            assistant = await group_assistant(self, chat_id)
-            await assistant.resume(chat_id)  # Fixed method name
-        except (IndexError, ValueError):
-            raise AssistantErr("No assistant available")
+        assistant = await group_assistant(self, chat_id)
+        await assistant.resume(chat_id)
 
     @capture_internal_err
     async def mute_stream(self, chat_id: int) -> None:
-        try:
-            assistant = await group_assistant(self, chat_id)
-            await assistant.mute(chat_id)  # Fixed method name
-        except (IndexError, ValueError):
-            raise AssistantErr("No assistant available")
+        assistant = await group_assistant(self, chat_id)
+        await assistant.mute(chat_id)
 
     @capture_internal_err
     async def unmute_stream(self, chat_id: int) -> None:
-        try:
-            assistant = await group_assistant(self, chat_id)
-            await assistant.unmute(chat_id)  # Fixed method name
-        except (IndexError, ValueError):
-            raise AssistantErr("No assistant available")
+        assistant = await group_assistant(self, chat_id)
+        await assistant.unmute(chat_id)
 
     @capture_internal_err
     async def stop_stream(self, chat_id: int) -> None:
-        try:
-            assistant = await group_assistant(self, chat_id)
-        except (IndexError, ValueError):
-            await _clear_(chat_id)
-            self.active_calls.discard(chat_id)
-            return
-            
+        assistant = await group_assistant(self, chat_id)
         await _clear_(chat_id)
         if chat_id not in self.active_calls:
             return
@@ -146,13 +122,7 @@ class Call:
 
     @capture_internal_err
     async def force_stop_stream(self, chat_id: int) -> None:
-        try:
-            assistant = await group_assistant(self, chat_id)
-        except (IndexError, ValueError):
-            await _clear_(chat_id)
-            self.active_calls.discard(chat_id)
-            return
-            
+        assistant = await group_assistant(self, chat_id)
         try:
             check = db.get(chat_id)
             if check:
@@ -181,26 +151,14 @@ class Call:
 
     @capture_internal_err
     async def vc_users(self, chat_id: int) -> list:
-        try:
-            assistant = await group_assistant(self, chat_id)
-            participants = await assistant.get_participants(chat_id)
-            return [p.user_id for p in participants if not p.muted_by_admin]
-        except:
-            return []
+        assistant = await group_assistant(self, chat_id)
+        participants = await assistant.get_participants(chat_id)
+        return [p.user_id for p in participants if not p.is_muted]
 
     @capture_internal_err
     async def change_volume(self, chat_id: int, volume: int) -> None:
-        try:
-            assistant = await group_assistant(self, chat_id)
-            volume = max(1, min(200, volume))
-            await assistant.change_volume_call(chat_id, volume)
-        except AttributeError:
-            try:
-                await assistant.set_call_property(chat_id, volume=volume)
-            except:
-                raise AssistantErr("Volume change not supported")
-        except (IndexError, ValueError):
-            raise AssistantErr("No assistant available")
+        assistant = await group_assistant(self, chat_id)
+        await assistant.change_volume_call(chat_id, volume)
 
     @capture_internal_err
     async def seek_stream(self, chat_id: int, file_path: str, to_seek: str, duration: str, mode: str) -> None:
@@ -215,161 +173,55 @@ class Call:
         if not isinstance(playing, list) or not playing or not isinstance(playing[0], dict):
             raise AssistantErr("Invalid stream info for speedup.")
 
-        # Convert and validate speed
-        try:
-            speed = float(speed)
-        except (ValueError, TypeError):
-            raise AssistantErr("Invalid speed value provided")
-        
-        if speed <= 0 or speed > 3.0:
-            raise AssistantErr("Speed must be between 0.1 and 3.0")
-
         assistant = await group_assistant(self, chat_id)
-        
-        # Use original file if speed is 1.0
-        if str(speed) == "1.0":
-            out = file_path
-        else:
-            base = os.path.basename(file_path)
-            # Clean filename and add proper extension
-            clean_base = "".join(c for c in base if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
-            if not clean_base.endswith(('.mp3', '.mp4', '.wav', '.m4a')):
-                clean_base += '.mp3'  # Default extension
-                
-            chatdir = os.path.join(os.getcwd(), "playback", str(speed))
-            if not os.path.isdir(chatdir):
-                os.makedirs(chatdir)
-            out = os.path.join(chatdir, clean_base)
-            
-            if not os.path.isfile(out):
-                # Use your proven speed multipliers
-                if str(speed) == "0.5":
-                    vs = 2.0
-                elif str(speed) == "0.75":
-                    vs = 1.35
-                elif str(speed) == "1.5":
-                    vs = 0.68
-                elif str(speed) == "2.0":
-                    vs = 0.5
-                else:
-                    vs = 1.0 / float(speed)
-                
-                # Build FFmpeg command with proper format specification
-                if playing[0]["streamtype"] == "video":
-                    cmd = [
-                        "ffmpeg", "-i", file_path,
-                        "-filter:v", f"setpts={vs}*PTS",
-                        "-filter:a", f"atempo={speed}",
-                        "-c:v", "libx264", "-c:a", "aac",
-                        "-preset", "ultrafast",
-                        "-y", out
-                    ]
-                else:
-                    cmd = [
-                        "ffmpeg", "-i", file_path,
-                        "-filter:a", f"atempo={speed}",
-                        "-c:a", "libmp3lame",
-                        "-b:a", "128k",
-                        "-y", out
-                    ]
-                
-                try:
-                    proc = await asyncio.create_subprocess_exec(
-                        *cmd,
-                        stdin=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        stdout=asyncio.subprocess.PIPE
-                    )
-                    stdout, stderr = await proc.communicate()
-                    
-                    if proc.returncode != 0:
-                        # If first attempt fails, try simpler approach
-                        LOGGER(__name__).warning(f"First attempt failed, trying simpler approach")
-                        
-                        if playing[0]["streamtype"] == "video":
-                            simple_cmd = [
-                                "ffmpeg", "-i", file_path,
-                                "-filter:v", f"setpts={vs}*PTS",
-                                "-filter:a", f"atempo={speed}",
-                                "-y", out
-                            ]
-                        else:
-                            simple_cmd = [
-                                "ffmpeg", "-i", file_path,
-                                "-filter:a", f"atempo={speed}",
-                                "-y", out
-                            ]
-                        
-                        proc = await asyncio.create_subprocess_exec(
-                            *simple_cmd,
-                            stdin=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE,
-                            stdout=asyncio.subprocess.PIPE
-                        )
-                        stdout, stderr = await proc.communicate()
-                        
-                        if proc.returncode != 0:
-                            LOGGER(__name__).error(f"Both FFmpeg attempts failed: {stderr.decode()}")
-                            # Use original file instead of failing
-                            out = file_path
-                            
-                except Exception as e:
-                    LOGGER(__name__).error(f"FFmpeg execution failed: {e}")
-                    out = file_path
+        base = os.path.basename(file_path)
+        chatdir = os.path.join("playback", str(speed))
+        os.makedirs(chatdir, exist_ok=True)
+        out = os.path.join(chatdir, base)
 
-        # Get duration
+        if not os.path.exists(out):
+            vs = str(2.0 / float(speed))
+            cmd = f"ffmpeg -i {file_path} -filter:v setpts={vs}*PTS -filter:a atempo={speed} {out}"
+            proc = await asyncio.create_subprocess_shell(
+                cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+
+        duration_str = await asyncio.get_event_loop().run_in_executor(None, check_duration, out)
         try:
-            dur = await asyncio.get_event_loop().run_in_executor(None, check_duration, out)
-            dur = int(float(dur))
-        except (ValueError, TypeError):
-            # Use original duration from database
-            dur = int(playing[0].get("seconds", 180))
+            dur = int(duration_str)
+        except ValueError:
+            LOGGER(__name__).warning(f"⚠️ Cannot convert duration: {duration_str}")
+            return  # Don't continue with invalid duration
 
         played, con_seconds = speed_converter(playing[0]["played"], speed)
-        duration = seconds_to_min(dur)
-        
-        # Create stream
-        if playing[0]["streamtype"] == "video":
-            stream = MediaStream(
-                out,
-                audio_parameters=AudioQuality.STUDIO,
-                video_parameters=VideoQuality.SD_480p,
-                ffmpeg_parameters=f"-ss {played} -to {duration}",
-            )
-        else:
-            stream = MediaStream(
-                out,
-                audio_parameters=AudioQuality.STUDIO,
-                ffmpeg_parameters=f"-ss {played} -to {duration}",
-            )
+        duration_min = seconds_to_min(dur)
+        is_video = playing[0]["streamtype"] == "video"
+        ffmpeg_params = f"-ss {played} -to {duration_min}"
+        stream = dynamic_media_stream(path=out, video=is_video, ffmpeg_params=ffmpeg_params)
 
-        # Play stream
-        if str(db[chat_id][0]["file"]) == str(file_path):
+        if chat_id in db and db[chat_id] and db[chat_id][0].get("file") == file_path:
             await assistant.play(chat_id, stream)
         else:
-            raise AssistantErr("Stream file mismatch during speedup")
+            raise AssistantErr("Stream mismatch during speedup.")
 
-        # Update database exactly like your v1.2.9
-        if str(db[chat_id][0]["file"]) == str(file_path):
-            exis = (playing[0]).get("old_dur")
-            if not exis:
-                db[chat_id][0]["old_dur"] = db[chat_id][0]["dur"]
-                db[chat_id][0]["old_second"] = db[chat_id][0]["seconds"]
-            db[chat_id][0]["played"] = con_seconds
-            db[chat_id][0]["dur"] = duration
-            db[chat_id][0]["seconds"] = dur
-            db[chat_id][0]["speed_path"] = out
-            db[chat_id][0]["speed"] = speed
+        db[chat_id][0].update({
+            "played": con_seconds,
+            "dur": duration_min,
+            "seconds": dur,
+            "speed_path": out,
+            "speed": speed,
+            "old_dur": db[chat_id][0].get("dur"),
+            "old_second": db[chat_id][0].get("seconds"),
+        })
 
     @capture_internal_err
     async def stream_call(self, link: str) -> None:
+        assistant = await group_assistant(self, config.LOGGER_ID)
         try:
-            assistant = await group_assistant(self, config.LOGGER_ID)
-            stream = MediaStream(
-                link,
-                audio_parameters=AudioQuality.STUDIO,
-            )
-            await assistant.play(config.LOGGER_ID, stream)
+            await assistant.play(config.LOGGER_ID, MediaStream(link))
         except ChatAdminRequired:
             LOGGER(__name__).warning(
                 f"❌ Cannot start stream in LOGGER_ID ({config.LOGGER_ID}) — bot is not admin!"
@@ -382,8 +234,6 @@ class Call:
                 )
             except Exception as e:
                 LOGGER(__name__).warning(f"Failed to notify owner: {e}")
-        except (IndexError, ValueError):
-            LOGGER(__name__).warning("No assistant available for stream_call")
         except Exception as e:
             LOGGER(__name__).exception(f"❌ stream_call failed: {e}")
 
@@ -399,21 +249,7 @@ class Call:
         assistant = await group_assistant(self, chat_id)
         lang = await get_lang(chat_id)
         _ = get_string(lang)
-        
-        if link.startswith(('http://', 'https://')) and 'index_' not in str(link):
-            if video:
-                stream = MediaStream(
-                    link,
-                    audio_parameters=AudioQuality.MEDIUM,
-                    video_parameters=VideoQuality.HD_720p,
-                )
-            else:
-                stream = MediaStream(
-                    link,
-                    audio_parameters=AudioQuality.STUDIO,
-                )
-        else:
-            stream = dynamic_media_stream(path=link, video=bool(video))
+        stream = dynamic_media_stream(path=link, video=bool(video))
 
         try:
             await assistant.play(chat_id, stream)
@@ -433,12 +269,9 @@ class Call:
 
         if await is_autoend():
             counter[chat_id] = {}
-            try:
-                users = len(await assistant.get_participants(chat_id))
-                if users == 1:
-                    autoend[chat_id] = datetime.now() + timedelta(minutes=1)
-            except:
-                pass
+            users = len(await assistant.get_participants(chat_id))
+            if users == 1:
+                autoend[chat_id] = datetime.now() + timedelta(minutes=1)
 
     @capture_internal_err
     async def play(self, client, chat_id: int) -> None:
@@ -475,7 +308,7 @@ class Call:
                 queued = check[0]["file"]
             except (KeyError, IndexError):
                 LOGGER(__name__).warning(f"Corrupted queue entry in {chat_id}")
-                return await self.play(client, chat_id)
+                return await self.play(client, chat_id)  # skip and retry
 
             language = await get_lang(chat_id)
             _ = get_string(language)
@@ -560,25 +393,10 @@ class Call:
                 db[chat_id][0]["markup"] = "stream"
 
             elif "index_" in queued:
+                stream = dynamic_media_stream(path=videoid, video=video)
                 try:
-                    if videoid.startswith(('http://', 'https://')):
-                        if video:
-                            stream = MediaStream(
-                                videoid,
-                                audio_parameters=AudioQuality.MEDIUM,
-                                video_parameters=VideoQuality.HD_720p,
-                            )
-                        else:
-                            stream = MediaStream(
-                                videoid,
-                                audio_parameters=AudioQuality.STUDIO,
-                            )
-                    else:
-                        stream = dynamic_media_stream(path=videoid, video=video)
-                    
                     await client.play(chat_id, stream)
-                except Exception as e:
-                    LOGGER(__name__).error(f"Index streaming failed: {e}")
+                except:
                     return await app.send_message(original_chat_id, text=_["call_6"])
 
                 button = stream_markup(_, chat_id)
@@ -676,40 +494,21 @@ class Call:
     @capture_internal_err
     async def ping(self) -> str:
         pings = []
-        if config.STRING1 and self.one:
-            try:
-                pings.append(await self.one.ping)
-            except:
-                pass
-        if config.STRING2 and self.two:
-            try:
-                pings.append(await self.two.ping)
-            except:
-                pass
-        if config.STRING3 and self.three:
-            try:
-                pings.append(await self.three.ping)
-            except:
-                pass
-        if config.STRING4 and self.four:
-            try:
-                pings.append(await self.four.ping)
-            except:
-                pass
-        if config.STRING5 and self.five:
-            try:
-                pings.append(await self.five.ping)
-            except:
-                pass
+        if config.STRING1:
+            pings.append(self.one.ping)
+        if config.STRING2:
+            pings.append(self.two.ping)
+        if config.STRING3:
+            pings.append(self.three.ping)
+        if config.STRING4:
+            pings.append(self.four.ping)
+        if config.STRING5:
+            pings.append(self.five.ping)
         return str(round(sum(pings) / len(pings), 3)) if pings else "0.0"
 
     @capture_internal_err
     async def decorators(self) -> None:
         assistants = list(filter(None, [self.one, self.two, self.three, self.four, self.five]))
-        
-        if not assistants:
-            LOGGER(__name__).warning("No assistants available for decorators")
-            return
 
         CRITICAL_FLAGS = (
             ChatUpdate.Status.KICKED |
@@ -726,18 +525,9 @@ class Call:
                         await self.stop_stream(update.chat_id)
                         return
 
-                elif isinstance(update, StreamEnded):
-                    # Handle both audio and video stream ends
-                    if update.stream_type in (StreamEnded.Type.AUDIO, StreamEnded.Type.VIDEO):
-                        # Check if there are more items in queue
-                        check = db.get(update.chat_id)
-                        if not check or len(check) == 0:
-                            # No more items in queue, leave the call
-                            await self.stop_stream(update.chat_id)
-                            return
-                        else:
-                            # Continue playing next item
-                            await self.play(client, update.chat_id)
+                elif isinstance(update, StreamEnded) and update.stream_type == StreamEnded.Type.AUDIO:
+                    assistant = await group_assistant(self, update.chat_id)
+                    await self.play(assistant, update.chat_id)
 
             except Exception as e:
                 import sys, traceback
