@@ -63,7 +63,7 @@ API_URL2 = getenv("API_URL2", None)
 API_KEY = getenv("API_KEY", None)
 COOKIE_URL = getenv("COOKIE_URL", None)
 
-UPSTREAM_REPO = getenv("UPSTREAM_REPO", "https://github.com/KEXI01/XYZ")
+UPSTREAM_REPO = getenv("UPSTREAM_REPO", "https://github.com/KEXI01/Opus")
 UPSTREAM_BRANCH = getenv("UPSTREAM_BRANCH", "main")
 GIT_TOKEN = getenv("GIT_TOKEN", "")
 HEROKU_APP_NAME = getenv("HEROKU_APP_NAME")
