@@ -56,6 +56,7 @@ SPOTIFY_ALBUM_IMG_URL = getenv("SPOTIFY_ALBUM_IMG_URL", "https://envs.sh/Olk.jpg
 SPOTIFY_PLAYLIST_IMG_URL = getenv("SPOTIFY_PLAYLIST_IMG_URL", "https://envs.sh/Olk.jpg")
 
 API_URL = getenv("API_URL", "https://vortex.webs.vc")
+MONGO_DB_URI = getenv("MONGO_DB_URI", None)
 URL1 = getenv("URL1", None)
 URL2 = getenv("URL2", None)
 API_URL1 = getenv("API_URL1", None)
