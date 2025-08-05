@@ -4,7 +4,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from config import LOGGER_ID as LOG_GROUP_ID
 from Opus import app
 from Opus.core.userbot import Userbot
-from Opus.utils.database import delete_served_chat, add_served_chat, get_assistant
+from Opus.utils.newdatabase import delete_served_chat, add_served_chat, get_assistant
 from strings.__init__ import LOGGERS
 
 
