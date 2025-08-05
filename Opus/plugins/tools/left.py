@@ -2,7 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from config import LOGGER_ID as LOG_GROUP_ID
 from Opus import app
-from Opus.utils.database import get_assistant, delete_served_chat
+from Opus.utils.newdatabase import get_assistant, delete_served_chat
 
 @app.on_message(filters.left_chat_member)
 async def on_left_chat_member(_, message: Message):
