@@ -15,7 +15,7 @@ async def ping_com(client, message: Message, _):
     start = datetime.now()
     
     pytgping, stats, response = await asyncio.gather(
-        Anony.ping(),
+        Space.ping(),
         bot_sys_stats(),
         message.reply_text(
             _["ping_1"].format(app.mention),
